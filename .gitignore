@@ -22,3 +22,5 @@ private-build-plans.toml
 .next
 out
 shared/fonts/imports/*/TTF/*
+
+.npm
