@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--mode", required=True)
 args = parser.parse_args()
 
-template = """
+template_common_begin = """
 [buildPlans.{font-id}]
 family = "{font-name}"           # Font menu family name
 spacing = "{spacing}"            # Optional; Values: `normal`, `term`, `fontconfig-mono`, or `fixed`
@@ -15,15 +15,9 @@ serifs = "{serif}"               # Optional; Values: `sans` or `slab`
 noCvSs = true                  # Disables cv## and ss## OpenType features
 noLigation = true               # Disables ligations.
 exportGlyphNames = false       # Set this to true for ligature support in Kitty (increased file size)
+"""
 
-[buildPlans.{font-id}.variants.design]
-percent = 'dots'
-asterisk = 'hex-low'
-brace = 'straight'
-
-[buildPlans.{font-id}.variants.italic]
-g = 'double-storey'
-
+template_common_end = """
 ###################################################################################################
 # Configure ligations
 
@@ -119,7 +113,44 @@ release = true
 from = ["{font-id}"]
 """
 
-default_fields = {
+templates = {
+    "normal": template_common_begin + """
+[buildPlans.{font-id}.variants.design]
+percent = 'dots'
+asterisk = 'hex-low'
+brace = 'straight'
+
+[buildPlans.{font-id}.variants.italic]
+g = 'double-storey'
+    """ + template_common_end,
+    "rounded": template_common_begin + """
+[buildPlans.{font-id}.variants]
+inherits = "ss12"
+
+[buildPlans.{font-id}.variants.design]
+capital-j = "flat-hook-serifed"
+a = "single-storey-earless-corner-serifed"
+f = "flat-hook-serifless-crossbar-at-x-height"
+g = "single-storey-flat-hook-earless-corner"
+t = "flat-hook"
+w = "curly-serifless"
+y = "cursive-flat-hook-serifless"
+zero = "slashed"
+one = "no-base"
+four = "closed-serifless"
+five = "upright-arched-serifless"
+six = "closed-contour"
+seven = "curly-serifless"
+eight = "two-circles"
+nine = "closed-contour"
+asterisk = "hex-low"
+paren = "flat-arc"
+brace = 'straight'
+percent = "rings-continuous-slash"
+    """ + template_common_end,
+}
+
+fields_with_defaults = {
     "font-id": None,
     "font-name": None,
     "serif": "sans",
@@ -132,16 +163,31 @@ default_fields = {
 
 instances = [
     {
+        "template": "normal",
         "font-id": "iosevka-xy-mono",
         "font-name": "Iosevka XY Mono",
     },
     {
+        "template": "normal",
         "font-id": "iosevka-xy-mono-ui",
         "font-name": "Iosevka XY Mono UI",
         "weight-regular": "350",
         "weight-book": "350",
         "weight-bold": "600",
     },
+    {
+        "template": "rounded",
+        "font-id": "iosevka-xy-rounded-mono",
+        "font-name": "Iosevka XY Rounded Mono",
+    },
+    {
+        "template": "rounded",
+        "font-id": "iosevka-xy-rounded-mono-ui",
+        "font-name": "Iosevka XY Rounded Mono UI",
+        "weight-regular": "350",
+        "weight-book": "350",
+        "weight-bold": "600",
+    }
 ]
 
 if args.mode == "generate-build-plans":
@@ -149,10 +195,10 @@ if args.mode == "generate-build-plans":
     f = open(output, "w")
     for instance in instances:
         final_instance = {}
-        for k in default_fields:
-            final_instance[k] = instance.get(k, default_fields[k])
+        for k in fields_with_defaults:
+            final_instance[k] = instance.get(k, fields_with_defaults[k])
             pass
-        f.write(template.format(**final_instance))
+        f.write(templates[instance["template"]].format(**final_instance))
         pass
 elif args.mode == "print-build-targets":
     sys.stdout.write(" ".join("super-ttc::{}".format(instance["font-id"]) for instance in instances))
